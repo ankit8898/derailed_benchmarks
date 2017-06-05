@@ -1,5 +1,24 @@
 # A Log of Changes!
 
+## [1.3.2]
+
+- Allow for use with Rack 11.
+
+
+## [1.3.1]
+
+- Allow for use with Rack 11.
+
+
+## [1.3.0] - 2015-01-07
+
+- Allow environment variable to skip Active Record setup.
+- Allow Rack 2 to work with Derailed.
+
+## [1.1.3] - 2015-10-15
+
+- Update docs
+
 ## [1.1.2] - 2015-10-05
 
 - Added ability to use TEST_COUNT environment variable with `perf:heap`.

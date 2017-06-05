@@ -18,15 +18,18 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ["lib"]
 
+  gem.required_ruby_version = ">= 2.1.0"
+
   gem.add_dependency "heapy",           "~> 0"
   gem.add_dependency "memory_profiler", "~> 0"
   gem.add_dependency "get_process_mem", "~> 0"
   gem.add_dependency "benchmark-ips",   "~> 2"
-  gem.add_dependency "rack",            "~> 1"
-  gem.add_dependency "rake",            "~> 10"
+  gem.add_dependency "rack",            ">= 1"
+  gem.add_dependency "rake",            "> 10", "< 13"
   gem.add_dependency "thor",            "~> 0.19"
 
-  gem.add_development_dependency "capybara", "~> 2"
-  gem.add_development_dependency "rails",    "~> 3"
-  gem.add_development_dependency "devise",   "~> 3"
+  gem.add_development_dependency "capybara",  "~> 2"
+  gem.add_development_dependency "rails",     "> 3", "< 6"
+  gem.add_development_dependency "devise",    "> 3", "< 5"
+  gem.add_development_dependency "appraisal", "2.2.0"
 end

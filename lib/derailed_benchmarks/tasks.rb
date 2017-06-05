@@ -6,7 +6,7 @@ namespace :perf do
 
     ENV["SECRET_KEY_BASE"] ||= "foofoofoo"
 
-    ENV['LOG_LEVEL'] = "FATAL"
+    ENV['LOG_LEVEL'] ||= "FATAL"
 
     require 'rails'
 
@@ -28,7 +28,7 @@ namespace :perf do
       DERAILED_APP.initialize! unless DERAILED_APP.instance_variable_get(:@initialized)
     end
 
-    if defined? ActiveRecord
+    if  ENV["DERAILED_SKIP_ACTIVE_RECORD"] && defined? ActiveRecord
       if defined? ActiveRecord::Tasks::DatabaseTasks
         ActiveRecord::Tasks::DatabaseTasks.create_current
       else # Rails 3.2
@@ -66,6 +66,19 @@ namespace :perf do
     PATH_TO_HIT = ENV["PATH_TO_HIT"] || ENV['ENDPOINT'] || "/"
     puts "Endpoint: #{ PATH_TO_HIT.inspect }"
 
+    HTTP_HEADER_PREFIX = "HTTP_".freeze
+    RACK_HTTP_HEADERS = ENV.select { |key| key.starts_with?(HTTP_HEADER_PREFIX) }
+
+    HTTP_HEADERS = RACK_HTTP_HEADERS.keys.inject({}) do |hash, rack_header_name|
+      # e.g. "HTTP_ACCEPT_CHARSET" -> "Accept-Charset"
+      header_name = rack_header_name[HTTP_HEADER_PREFIX.size..-1].split("_").map(&:downcase).map(&:capitalize).join("-")
+      hash[header_name] = RACK_HTTP_HEADERS[rack_header_name]
+      hash
+    end
+    puts "HTTP headers: #{HTTP_HEADERS}" unless HTTP_HEADERS.empty?
+
+    CURL_HTTP_HEADER_ARGS = HTTP_HEADERS.map { |http_header_name, value| "-H \"#{http_header_name}: #{value}\"" }.join(" ")
+
     require 'rack/test'
     require 'rack/file'
 
@@ -80,7 +93,7 @@ namespace :perf do
       sleep 1
 
       def call_app(path = File.join("/", PATH_TO_HIT))
-        cmd = "curl http://localhost:#{@port}#{path} -s --fail 2>&1"
+        cmd = "curl #{CURL_HTTP_HEADER_ARGS} 'http://localhost:#{@port}#{path}' -s --fail 2>&1"
         response = `#{cmd}`
         raise "Bad request to #{cmd.inspect} Response:\n#{ response.inspect }" unless $?.success?
       end
@@ -88,7 +101,7 @@ namespace :perf do
       @app = Rack::MockRequest.new(DERAILED_APP)
 
       def call_app
-        response = @app.get(PATH_TO_HIT)
+        response = @app.get(PATH_TO_HIT, RACK_HTTP_HEADERS)
         raise "Bad request: #{ response.body }" unless response.status == 200
         response
       end
@@ -200,35 +213,6 @@ namespace :perf do
     TEST_COUNT.times { call_app }
     GC::Profiler.report
     GC::Profiler.disable
-  end
-
-  task :foo => [:setup] do
-    require 'objspace'
-    call_app
-
-    before = Hash.new { 0 }
-    after  = Hash.new { 0 }
-    after_size = Hash.new { 0 }
-    GC.start
-    GC.disable
-
-    TEST_COUNT.times { call_app }
-
-    rvalue_size = GC::INTERNAL_CONSTANTS[:RVALUE_SIZE]
-    ObjectSpace.each_object do |obj|
-      after[obj.class] += 1
-      memsize = ObjectSpace.memsize_of(obj) + rvalue_size
-      # compensate for API bug
-      memsize = rvalue_size if memsize > 100_000_000_000
-      after_size[obj.class] += memsize
-    end
-
-    require 'pp'
-    pp after.sort {|(k,v), (k2, v2)| v2 <=> v }
-    puts "========="
-    puts
-    puts
-    pp after_size.sort {|(k,v), (k2, v2)| v2 <=> v }
   end
 
   desc "outputs allocated object diff after app is called TEST_COUNT times"

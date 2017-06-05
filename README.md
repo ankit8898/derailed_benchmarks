@@ -24,8 +24,8 @@ curl 7.37.1 #...
 
 Put this in your gemfile:
 
-```
-gem 'derailed', group: :development
+```ruby
+gem 'derailed_benchmarks', group: :development
 ```
 
 Then run `$ bundle install`.
@@ -34,7 +34,7 @@ While executing your commands you may need to use `bundle exec` before typing th
 
 To use all profiling methods available also add:
 
-```
+```ruby
 gem 'stackprof', group: :development
 ```
 
@@ -42,7 +42,7 @@ You must be using Ruby 2.1+ to install these libraries. If you're on an older ve
 
 ## Use
 
-There are two ways to use benchmark an app. Derailed can either try to boot your web app and run requests against it while benchmarking, or it can statically give you more information about the dependencies that are in your Gemfile. Booting your app will always be more accurate, but if you cannot get your app to run in production locally, you'll still find the static information useful.
+There are two ways to benchmark an app. Derailed can either try to boot your web app and run requests against it while benchmarking, or it can statically give you more information about the dependencies that are in your Gemfile. Booting your app will always be more accurate, but if you cannot get your app to run in production locally, you'll still find the static information useful.
 
 ## Static Benchmarking
 
@@ -75,8 +75,8 @@ TOP: 54.1836 MiB
 
 _Aside: A "MiB", which is the [IEEE] and [IEC] symbol for Mebibyte, is 2<sup>20</sup> bytes / 1024 Kibibytes (which are in turn 1024 bytes)._
 
-[IEEE]: http://en.wikipedia.org/wiki/IEEE_1541-2002
-[IEC]: http://en.wikipedia.org/wiki/IEC_80000-13
+[IEEE]: https://en.wikipedia.org/wiki/IEEE_1541-2002
+[IEC]: https://en.wikipedia.org/wiki/IEC_80000-13
 
 Here we can see that `mail` uses 18MiB, with the majority coming from `mime/types`. You can use this information to prune out large dependencies you don't need. Also if you see a large memory use by a gem that you do need, please open up an issue with that library to let them know (be sure to include reproduction instructions). Hopefully as a community we can identify memory hotspots and reduce their impact. Before we can fix performance problems, we need to know where those problems exist.
 
@@ -86,9 +86,9 @@ By default this task will only return results from the `:default` and `"producti
 $ bundle exec derailed bundle:mem development
 ```
 
-You can use `CUT_OFF=0.3` to only show files that have above a certain memory useage, this can be used to help eliminate noise.
+You can use `CUT_OFF=0.3` to only show files that have above a certain memory usage, this can be used to help eliminate noise.
 
-Note: This method won't include files in your own app, only items in your Gemfile. For that you'll need to use `derailed exec mem`. See below for more info.
+Note: This method won't include files in your own app, only items in your Gemfile. For that you'll need to use `bundle exec derailed exec mem`. See below for more info.
 
 The same file may be required by several libraries, since Ruby only requires files once, the cost is only associated with the first library to require a file. To make this more visible duplicate entries will list all the parents they belong to. For example both `mail` and `fog` require `mime/types. So it may show up something like this in your app:
 
@@ -101,7 +101,7 @@ TOP: 54.1836 MiB
     mail/message: 0.3906 MiB
 ```
 
-That way you'll know that simply removing the top level library (mail) would not result in a memory reduction. The output is trucated after the first two entries:
+That way you'll know that simply removing the top level library (mail) would not result in a memory reduction. The output is truncated after the first two entries:
 
 
 ```
@@ -116,7 +116,7 @@ If you want to see everything that requires `fog/core` you can run `CUT_OFF=0 bu
 Update: While `mime/types` looks horrible in these examples, it's been fixed. You can add this to the top of your gemfile for free memory:
 
 ```ruby
-gem 'mime-types', '~> 2.4.3', require: 'mime/types/columnar'
+gem 'mime-types', [ '~> 2.6', '>= 2.6.1' ], require: 'mime/types/columnar'
 ```
 
 ### Objects created at Require time
@@ -141,7 +141,7 @@ allocated memory by gem
    8103432  json-1.8.2
 ```
 
-Once you identify a gem that creates a large amount of memory using `$ derailed bundle:mem` you can pull that gem into it's own Gemfile and run `$ derailed bundle:objects` to get detailed information about it. This information can be used by contributors and library authors to identify and eliminate object creation hotspots.
+Once you identify a gem that creates a large amount of memory using `$ bundle exec derailed bundle:mem` you can pull that gem into it's own Gemfile and run `$ bundle exec derailed bundle:objects` to get detailed information about it. This information can be used by contributors and library authors to identify and eliminate object creation hotspots.
 
 
 By default this task will only return results from the `:default` and `"production"` groups. If you want a different group you can run with.
@@ -150,14 +150,14 @@ By default this task will only return results from the `:default` and `"producti
 $ bundle exec derailed bundle:objects development
 ```
 
-Note: This method won't include files in your own app, only items in your Gemfile. For that you'll need to use `derailed exec objects`. See below for more info.
+Note: This method won't include files in your own app, only items in your Gemfile. For that you'll need to use `bundle exec derailed exec objects`. See below for more info.
 
 
 ## Dynamic app Benchmarking
 
-This benchmarking will attempt to boot your Rails app and run benchmarks against it. Unlike the static benchmarking with `$ derailed bundle:*` these will include information about your specific app. The pro is you'll get more information and potentially identify problems in your app code, the con is that it requires you to be able to boot and run your application in a `production` environment locally, which for some apps is non-trivial.
+This benchmarking will attempt to boot your Rails app and run benchmarks against it. Unlike the static benchmarking with `$ bundle exec derailed bundle:*` these will include information about your specific app. The pro is you'll get more information and potentially identify problems in your app code, the con is that it requires you to be able to boot and run your application in a `production` environment locally, which for some apps is non-trivial.
 
-You may want to check out [mini-profiler](https://github.com/MiniProfiler/rack-mini-profiler), here's a [mini-profiler walkthrough](http://www.justinweiss.com/blog/2015/05/11/a-new-way-to-understand-your-rails-apps-performance). It's great and does slightly different benchmarking than what you'll find here.
+You may want to check out [mini-profiler](https://github.com/MiniProfiler/rack-mini-profiler), here's a [mini-profiler walkthrough](http://www.justinweiss.com/articles/a-new-way-to-understand-your-rails-apps-performance/). It's great and does slightly different benchmarking than what you'll find here.
 
 ### Running in Production Locally.
 
@@ -183,7 +183,7 @@ Once you can boot a console in production, you'll need to be able to boot a serv
 $ RAILS_ENV=production rails server
 ```
 
-You may need to disable enforcing SSL or other domain restrictions temporarially. If you do these, don't forget to add them back in before deploying any code (eek!).
+You may need to disable enforcing SSL or other domain restrictions temporarily. If you do these, don't forget to add them back in before deploying any code (eek!).
 
 You can get information from STDOUT if you're using `rails_12factor` gem, or from `log/production.log` by running
 
@@ -198,7 +198,7 @@ Once you've fixed all errors and you can run a server in production, you're almo
 You can run commands against your app by running `$ derailed exec`. There are sections on setting up Rack and using authenticated requests below. You can see what commands are available by running:
 
 ```
-$ derailed exec --help
+$ bundle exec derailed exec --help
   $ derailed exec perf:allocated_objects  # outputs allocated object diff after app is called TEST_COUNT times
   $ derailed exec perf:gc  # outputs GC::Profiler.report data while app is called TEST_COUNT times
   $ derailed exec perf:ips  # iterations per second
@@ -241,9 +241,9 @@ PID: 78675
 Here we can see that while the memory use is increasing, it levels off around 183 MiB. You'll want to run this task using ever increasing values of `TEST_COUNT=` for example
 
 ```
-$ TEST_COUNT=5000 derailed exec perf:mem_over_time
-$ TEST_COUNT=10_000 derailed exec perf:mem_over_time
-$ TEST_COUNT=20_000 derailed exec perf:mem_over_time
+$ TEST_COUNT=5000 bundle exec derailed exec perf:mem_over_time
+$ TEST_COUNT=10_000 bundle exec derailed exec perf:mem_over_time
+$ TEST_COUNT=20_000 bundle exec derailed exec perf:mem_over_time
 ```
 
 Adjust your counts appropriately so you can get results in a reasonable amount of time. If your memory never levels off, congrats! You've got a memory leak! I recommend copying and pasting values from the file generated into google docs and graphing it so you can get a better sense of the slope of your line.
@@ -264,17 +264,16 @@ This task hits your app and uses memory_profiler to see where objects are create
 
 
 ```
-$ TEST_COUNT=10 derailed exec perf:objects
+$ TEST_COUNT=10 bundle exec derailed exec perf:objects
 ```
 
 This is an expensive operation, so you likely want to keep the count lowish. Once you've identified a hotspot read [how ruby uses memory](http://www.sitepoint.com/ruby-uses-memory/) for some tips on reducing object allocations.
 
-This is is similar to `$ bundle exec derailed bundle:objects` however it includes objects created at runtime. It's much more useful for actual production performance debugging, the other is more useful for library authors to debug.
+This is similar to `$ bundle exec derailed bundle:objects` however it includes objects created at runtime. It's much more useful for actual production performance debugging, the other is more useful for library authors to debug.
 
 ## I want a Heap Dump
 
-If you're still struggling with runtime memory you can generate a heap dump that can later be analyzed using [heap_inspect](https://github.com/schneems/heap_inspect).
-
+If you're still struggling with runtime memory you can generate a heap dump that can later be analyzed using [heap_inspect](https://github.com/schneems/heapy).
 
 ```
 $ bundle exec derailed exec perf:heap
@@ -295,7 +294,7 @@ Try uploading "tmp/2015-10-01T12:31:03-05:00-heap.dump" to http://tenderlove.git
 For more help on getting data from a heap dump see
 
 ```
-$ heap_inspect --help
+$ heapy --help
 ```
 
 ### Memory Is large at boot.
@@ -378,7 +377,7 @@ Calculating -------------------------------------
                  ips      3.306  (± 0.0%) i/s -     17.000
 ```
 
-This will hit an endpoint in your application using [benchmark-ips](https://github.com/evanphx/benchmark-ips). In "iterations per second" a higher value is always better. You can run your code change several times using this method, and then run your "baseline" codebase (without your changes) to see how it affects your overall performance. You'll want to run and record the results several times (including the std deviation) so you can help eliminate noise. Benchmarking is hard, this technique isn't perfect but it's definetly better than nothing.
+This will hit an endpoint in your application using [benchmark-ips](https://github.com/evanphx/benchmark-ips). In "iterations per second" a higher value is always better. You can run your code change several times using this method, and then run your "baseline" codebase (without your changes) to see how it affects your overall performance. You'll want to run and record the results several times (including the std deviation) so you can help eliminate noise. Benchmarking is hard, this technique isn't perfect but it's definitely better than nothing.
 
 If you care you can also run pure benchmark (without ips):
 
@@ -402,15 +401,33 @@ For tasks that are run a number of times you can set the number using `TEST_COUN
 $ TEST_COUNT=100_000 bundle exec derailed exec perf:test
 ```
 
-## Hitting a different endpoint with `PATH_TO_HIT`
+### Hitting a different endpoint with `PATH_TO_HIT`
 
 By default tasks will hit your homepage `/`. If you want to hit a different url use `PATH_TO_HIT` for example if you wanted to go to `users/new` you can execute:
 
 ```
-$ PATH_TO_HIT=/users/new derailed exec perf:mem
+$ PATH_TO_HIT=/users/new bundle exec derailed exec perf:mem
 ```
 
-### Using a real web server with USE_SERVER
+This method accepts a full uri. For example, allowing you to hit a subdomain endpoint:
+
+```
+$ PATH_TO_HIT=http://subdomain.lvh.me:3000/users/new bundle exec derailed exec perf:mem
+```
+
+Beware that you cannot combine a full uri with `USE_SERVER`.
+
+### Setting HTTP headers
+
+You can specify HTTP headers by setting `HTTP_<header name>` variables. Example:
+
+```
+$ HTTP_AUTHORIZATION="Basic YWRtaW46c2VjcmV0\n" \
+  HTTP_USER_AGENT="Mozilla/5.0" \
+  PATH_TO_HIT=/foo_secret bundle exec derailed exec perf:ips
+```
+
+### Using a real web server with `USE_SERVER`
 
 All tests are run without a webserver (directly using `Rack::Mock` by default), if you want to use a webserver set `USE_SERVER` to a Rack::Server compliant server, such as `webrick`.
 
@@ -421,13 +438,20 @@ $ USE_SERVER=webrick bundle exec derailed exec perf:mem
 Or
 
 ```
-$ USE_SERVER=puma derailed exec perf:mem
+$ USE_SERVER=puma bundle exec derailed exec perf:mem
 ```
 
 This boots a webserver and hits it using `curl` instead of in memory. This is useful if you think the performance issue is related to your webserver.
 
 Note: this plugs in the given webserver directly into rack, it doesn't use any `puma.config` file etc. that you have set-up. If you want to do this, i'm open to suggestions on how (and pull requests)
 
+### Excluding ActiveRecord
+
+By default, derailed will load ActiveRecord if the gem is included as a dependency.  It is included by default, if you just include the `rails` gem.  If you are using a different ORM, you will either need to only include the `railties` gem, or set the `DERAILED_SKIP_ACTIVE_RECORD` flag.
+
+```
+$ DERAILED_SKIP_ACTIVE_RECORD=true
+```
 
 ### Running in a different environment
 
@@ -480,7 +504,7 @@ $ rake -f perf.rake -T
 
 Using Rails? You don't need to do anything special. If you're using Rack, you need to tell us how to boot your app. In your `perf.rake` file add a task:
 
-```
+```ruby
 namespace :perf do
   task :rack_load do
     DERAILED_APP = # your code here
@@ -534,7 +558,7 @@ $ cat perf.rake
 
 If you want you can customize the user that is logged in by setting that value in your `perf.rake` file.
 
-```
+```ruby
 DerailedBenchmarks.auth.user = -> { User.find_or_create!(twitter: "schneems") }
 ```
 
